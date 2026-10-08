@@ -439,7 +439,7 @@ func firstLine(s string) string {
 
 func (f *remoteForm) View(m *Model) string {
 	w := modalWidth(m, 110)
-	labelW := 26
+	labelW := 28
 	inW := w - labelW - 22
 	if inW < 20 {
 		inW = 20
@@ -487,9 +487,55 @@ func (f *remoteForm) View(m *Model) string {
 	}
 	lines = append(lines, line{saveKey, "\n" + save})
 
-	h := m.h - 22
-	if h < 4 {
-		h = 4
+	var hb strings.Builder
+	// Help for the focused option.
+	if fld := f.field(f.focus); fld != nil {
+		help := strings.TrimSpace(fld.opt.Help)
+		maxHelp, maxEx := 5, 6
+		if m.h < 40 {
+			maxHelp, maxEx = 2, 4
+		}
+		hl := strings.Split(wordWrap(help, w-6), "\n")
+		if len(hl) > maxHelp {
+			hl = append(hl[:maxHelp], "…")
+		}
+		hb.WriteString("\n" + sBold.Render(fld.opt.Name) + "\n" + sMuted.Render(strings.Join(hl, "\n")))
+		if ex := f.examplesFor(fld); len(ex) > 0 {
+			hb.WriteString("\n")
+			cur := fld.value()
+			for i, e := range ex {
+				if i >= maxEx {
+					hb.WriteString(sMuted.Render(fmt.Sprintf("\n  … %d more (◂▸ to cycle)", len(ex)-maxEx)))
+					break
+				}
+				mark := "  "
+				if e.Value == cur {
+					mark = sGreen.Render("▸ ")
+				}
+				hb.WriteString("\n" + mark + trunc(pad(e.Value, 24)+" "+sMuted.Render(firstLine(e.Help)), w-8))
+			}
+		}
+		if wrapsRemote(f.backend.Name, fld.opt.Name) {
+			hb.WriteString("\n\n" + sMuted.Render("Tip: use remote:path, e.g. gdrive:encrypted - the wrapped remote must exist."))
+		}
+		if fld.opt.IsPassword && f.backend.Name == "crypt" {
+			hb.WriteString("\n\n" + sYellow.Render("Back up crypt passwords somewhere safe: without them the files can't be decrypted."))
+		}
+	} else if f.focus == "" {
+		hb.WriteString("\n" + sMuted.Render("The name you'll see in the remote list and that clients see as a folder."))
+	}
+	if f.backend.NeedsOAuth() && f.edit == nil {
+		hb.WriteString("\n\n" + sYellow.Render("This type needs a login: after saving, rclone walks you through it (works over SSH)."))
+	}
+	if f.err != "" {
+		hb.WriteString("\n\n" + sErr.Render(f.err))
+	}
+	// Everything except the field list: border 2, title 2, description 2,
+	// more markers 2, help, footer 3.
+	help := hb.String()
+	h := m.bodyHeight() - 11 - strings.Count(help, "\n") - 1
+	if h < 3 {
+		h = 3
 	}
 	cur := 0
 	for i, l := range lines {
@@ -508,44 +554,7 @@ func (f *remoteForm) View(m *Model) string {
 		b.WriteString(sMuted.Render("  ↓ more") + "\n")
 	}
 
-	// Help for the focused option.
-	if fld := f.field(f.focus); fld != nil {
-		help := strings.TrimSpace(fld.opt.Help)
-		hl := strings.Split(wordWrap(help, w-6), "\n")
-		if len(hl) > 5 {
-			hl = append(hl[:5], "…")
-		}
-		b.WriteString("\n" + sBold.Render(fld.opt.Name) + "\n" + sMuted.Render(strings.Join(hl, "\n")))
-		if ex := f.examplesFor(fld); len(ex) > 0 {
-			b.WriteString("\n")
-			cur := fld.value()
-			for i, e := range ex {
-				if i >= 6 {
-					b.WriteString(sMuted.Render(fmt.Sprintf("\n  … %d more (◂▸ to cycle)", len(ex)-6)))
-					break
-				}
-				mark := "  "
-				if e.Value == cur {
-					mark = sGreen.Render("▸ ")
-				}
-				b.WriteString("\n" + mark + trunc(pad(e.Value, 24)+" "+sMuted.Render(firstLine(e.Help)), w-8))
-			}
-		}
-		if wrapsRemote(f.backend.Name, fld.opt.Name) {
-			b.WriteString("\n\n" + sMuted.Render("Tip: use remote:path, e.g. gdrive:encrypted - the wrapped remote must exist."))
-		}
-		if fld.opt.IsPassword && f.backend.Name == "crypt" {
-			b.WriteString("\n\n" + sYellow.Render("Back up crypt passwords somewhere safe: without them the files can't be decrypted."))
-		}
-	} else if f.focus == "" {
-		b.WriteString("\n" + sMuted.Render("The name you'll see in the remote list and that clients see as a folder."))
-	}
-	if f.backend.NeedsOAuth() && f.edit == nil {
-		b.WriteString("\n\n" + sYellow.Render("This type needs a login: after saving, rclone walks you through it (works over SSH)."))
-	}
-	if f.err != "" {
-		b.WriteString("\n\n" + sErr.Render(f.err))
-	}
+	b.WriteString(help)
 	pairs := []string{"tab/↑↓", "move", "◂▸", "choose", "ctrl+a", map[bool]string{true: "hide advanced", false: "show advanced"}[f.adv]}
 	if fld := f.field(f.focus); fld != nil && fld.opt.IsPassword {
 		pairs = append(pairs, "ctrl+g", "generate", "ctrl+r", "reveal")

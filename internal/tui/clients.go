@@ -142,6 +142,9 @@ func (m *Model) clientsView(h int) (string, string) {
 		return b.String(), footer
 	}
 	nameW, userW := 22, 18
+	if m.w < 100 {
+		nameW, userW = 16, 12
+	}
 	remW := m.w - 6 - nameW - userW - 3
 	b.WriteString(sHeader.Render("   "+pad("NAME", nameW)+" "+pad("USERNAME", userW)+" "+"REMOTES (each is a folder for the client)") + "\n")
 	start, end := window(m.cursor[tabClients], len(cs), h-1)
@@ -384,7 +387,8 @@ func (f *clientForm) View(m *Model) string {
 	if len(f.items) == 0 {
 		b.WriteString(sMuted.Render("  no remotes configured yet") + "\n")
 	}
-	h := m.h - 16
+	// border 2, title 2, name/user 2, header 2, save 2, error 2, footer 3
+	h := m.bodyHeight() - 15
 	if h < 3 {
 		h = 3
 	}

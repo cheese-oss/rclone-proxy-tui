@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -238,13 +239,13 @@ func (d *Daemon) reconcile(force bool) bool {
 	if revoked {
 		d.logger.Printf("client access changed: restarting servers to drop cached logins")
 	}
-	any := changed
+	dirty := changed
 	for _, proto := range state.AllProtocols {
 		if d.reconcileProto(proto, revoked) {
-			any = true
+			dirty = true
 		}
 	}
-	return any
+	return dirty
 }
 
 func (d *Daemon) setStatus(proto state.Protocol, s state.ProtoStatus) {
@@ -525,8 +526,12 @@ func (w *prefixWriter) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
+// rcloneTimestamp matches the date rclone puts in front of its log lines;
+// our own logger already adds one.
+var rcloneTimestamp = regexp.MustCompile(`^\d{4}/\d\d/\d\d \d\d:\d\d:\d\d `)
+
 func (w *prefixWriter) line(l string) {
-	l = strings.TrimRight(l, "\r")
+	l = rcloneTimestamp.ReplaceAllString(strings.TrimRight(l, "\r"), "")
 	if l == "" {
 		return
 	}

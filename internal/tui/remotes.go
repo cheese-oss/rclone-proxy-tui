@@ -385,12 +385,15 @@ func (m *Model) remotesView(h int) (string, string) {
 	}
 
 	nameW, typeW, usedW := 22, 12, 22
+	if m.w < 110 {
+		nameW, typeW, usedW = 16, 8, 16
+	}
 	detailW := m.w - 4 - nameW - typeW - usedW - 4
 	sel := ""
 	if len(m.selected) > 0 {
 		sel = fmt.Sprintf("  (%d selected - press s to share them, esc to clear)", len(m.selected))
 	}
-	b.WriteString(sHeader.Render(pad("    NAME", nameW+4)+" "+pad("TYPE", typeW)+" "+pad("SHARED WITH", usedW)+" "+"POINTS AT") + sYellow.Render(sel) + "\n")
+	b.WriteString(sHeader.Render(pad("     NAME", nameW+5)+" "+pad("TYPE", typeW)+" "+pad("SHARED WITH", usedW)+" "+"POINTS AT") + sYellow.Render(sel) + "\n")
 	start, end := window(m.cursor[tabRemotes], len(m.remotes), h-1)
 	for i := start; i < end; i++ {
 		r := m.remotes[i]

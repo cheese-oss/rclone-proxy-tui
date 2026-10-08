@@ -149,9 +149,10 @@ func newInfoModal(title, text string, keys ...infoKey) *infoModal {
 
 func (im *infoModal) layout(m *Model) int {
 	w := modalWidth(m, 100)
-	h := m.h - 9
-	if h < 5 {
-		h = 5
+	// border 2 + title 2 + footer gap 1 + footer up to 2 lines
+	h := m.bodyHeight() - 8
+	if h < 3 {
+		h = 3
 	}
 	content := wordWrap(im.text, w-4)
 	if lines := strings.Count(content, "\n") + 1; lines < h {
@@ -281,13 +282,17 @@ func (p *pickModal) Update(m *Model, k tea.KeyMsg) (bool, tea.Cmd) {
 func (p *pickModal) View(m *Model) string {
 	w := modalWidth(m, 90)
 	items := p.filtered()
-	h := m.h - 12
+	var b strings.Builder
+	promptLines := 0
+	if p.prompt != "" {
+		pr := wordWrap(p.prompt, w-4)
+		promptLines = strings.Count(pr, "\n") + 2
+		b.WriteString(pr + "\n\n")
+	}
+	// border 2 + title 2 + filter 2 + footer 2
+	h := m.bodyHeight() - 8 - promptLines
 	if h < 3 {
 		h = 3
-	}
-	var b strings.Builder
-	if p.prompt != "" {
-		b.WriteString(wordWrap(p.prompt, w-4) + "\n\n")
 	}
 	b.WriteString(sMuted.Render("filter: ") + p.filter + sMuted.Render("▏") + "\n\n")
 	labelW := 0

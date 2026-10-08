@@ -445,6 +445,14 @@ func (m *Model) headerView() string {
 	}
 	gap := m.w - lipgloss.Width(left) - lipgloss.Width(right)
 	if gap < 1 {
+		// Narrow terminal: just the daemon state.
+		right = sGreen.Render("● daemon")
+		if !m.daemonUp {
+			right = sRed.Render("○ daemon stopped")
+		}
+		gap = m.w - lipgloss.Width(left) - lipgloss.Width(right)
+	}
+	if gap < 1 {
 		return trunc(left, m.w)
 	}
 	return left + strings.Repeat(" ", gap) + right
